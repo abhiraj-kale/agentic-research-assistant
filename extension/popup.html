@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Research Assistant</title>
+  <script src="libs/marked.min.js"></script>
+  <script src="libs/html2pdf.bundle.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #1a252f;
+      --bg-light: #2c3e50;
+      --accent-blue: #3498db;
+      --accent-green: #2ecc71;
+      --accent-purple: #9b59b6;
+      --text-white: #ffffff;
+      --text-gray: #bdc3c7;
+    }
+
+    body { 
+      width: 100%; 
+      height: 100vh;
+      margin: 0; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background-color: var(--bg-light);
+      color: var(--text-white);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      background-color: var(--bg-dark);
+      border-bottom: 2px solid #34495e;
+    }
+
+    .container { 
+      padding: 20px; 
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .mode-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--text-gray);
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #34495e;
+      background: #1a252f;
+      color: white;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button { 
+      width: 100%; 
+      padding: 14px; 
+      cursor: pointer; 
+      border: none; 
+      border-radius: 4px;
+      font-weight: bold;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:active { transform: scale(0.98); }
+    button:disabled { background-color: #7f8c8d !important; cursor: not-allowed; }
+
+    #runBtn { background-color: var(--accent-blue); color: white; }
+    #summarizeBtn { background-color: var(--accent-purple); color: white; }
+
+    #output { 
+      white-space: pre-wrap; 
+      font-size: 13px; 
+      margin-top: 20px; 
+      padding: 15px;
+      background: #34495e;
+      border-radius: 6px;
+      border-left: 4px solid var(--accent-blue);
+      min-height: 100px;
+      line-height: 1.5;
+    }
+
+    #closeBtn {
+      background: none;
+      border: none;
+      color: var(--text-gray);
+      font-size: 22px;
+      width: auto;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    #closeBtn:hover { color: white; }
+
+    .footer {
+      padding: 10px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-gray);
+      background: var(--bg-dark);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span style="font-weight: bold; font-size: 16px;">🔍 Agentic Research-Assistant</span>
+    <button id="closeBtn" title="Close Panel">×</button>
+  </div>
+
+  <div class="container">
+    <div class="mode-container">
+      <div class="label">Research a Topic</div>
+      <input type="text" id="topic" placeholder="e.g. Deep Sea Exploration...">
+      <button id="runBtn">
+        <span>🚀</span> Start Deep Research
+      </button>
+    </div>
+
+    <div style="text-align: center; margin: 15px 0; color: #5d6d7e; font-size: 12px;">— OR —</div>
+
+    <div class="mode-container">
+      <div class="label">Current Tab Action</div>
+      <button id="summarizeBtn">
+        <span>📄</span> Summarize This Page
+      </button>
+    </div>
+
+    <div class="label">Status & Logs</div>
+    <div id="output">Ready to assist you...</div>
+  </div>
+
+  <div class="footer">
+    Persistent Side Panel Mode v2.0
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
