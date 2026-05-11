@@ -1,3 +1,5 @@
+const HOST = "https://agentic-research-assistant-yoh8.onrender.com";
+
 document.addEventListener('DOMContentLoaded', () => {
     const topicInput = document.getElementById('topic');
     const output = document.getElementById('output');
@@ -14,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         output.style.color = "var(--text-gray)";
 
         try {
-            const response = await fetch('http://localhost:8000/research', {
+            const response = await fetch(`${HOST}/research`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
