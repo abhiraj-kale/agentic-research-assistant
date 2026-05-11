@@ -7,18 +7,28 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from crewai import Agent, Task, Crew, LLM
-from langchain_tavily import TavilySearch
+from crewai_tools import TavilySearchTool
 
 load_dotenv()
 
 # --- LLM CONFIGURATION ---
+# I fixed the order here: Mistral is now truly the first item (Index 0)
+# --- LLM CONFIGURATION ---
 llm_pool = [
-    LLM(model="groq/llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY")),
+    # 1. Primary: Gemini 2.5 Flash (Lightning fast, huge context window, perfect for research)
+    LLM(model="gemini/gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY")),
+
+    # 2. Secondary: Mistral Large (Flawless fallback for tool calling)
     LLM(model="mistral/mistral-large-latest", api_key=os.getenv("MISTRAL_API_KEY")),
-    LLM(model="groq/llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY"))
+    
+    # 3. Tertiary: Llama 3.1 8B (Fast and reliable Groq fallback)
+    LLM(model="groq/llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
+    
+    # 4. Last Resort: Llama 3.3 70B 
+    LLM(model="groq/llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY"))
 ]
 
-search_tool = TavilySearch(api_key=os.getenv("TAVILY_API_KEY"))
+search_tool = TavilySearchTool()
 
 app = FastAPI()
 
@@ -34,7 +44,7 @@ class ResearchRequest(BaseModel):
     topic: str = None
     textToSummarize: str = None
 
-current_llm_index = 0
+# Notice: current_llm_index = 0 is GONE from here
 
 @app.post("/research")
 async def start_research(request: ResearchRequest):
@@ -46,7 +56,7 @@ async def start_research(request: ResearchRequest):
 
     # --- ASYNC GENERATOR FOR STREAMING ---
     async def event_generator():
-        global current_llm_index
+        # Notice: global current_llm_index is GONE from here
         
         for attempt in range(len(llm_pool)):
             try:
@@ -61,8 +71,9 @@ async def start_research(request: ResearchRequest):
                     yield f"data: {json.dumps({'status': 'progress', 'message': search_msg})}\n\n"
                 await asyncio.sleep(0.5)
 
-                primary_llm = llm_pool[current_llm_index % len(llm_pool)]
-                secondary_llm = llm_pool[(current_llm_index + 1) % len(llm_pool)]
+                # Now we strictly use the 'attempt' variable!
+                primary_llm = llm_pool[attempt % len(llm_pool)]
+                secondary_llm = llm_pool[(attempt + 1) % len(llm_pool)]
 
                 # SETUP AGENTS
                 researcher = Agent(
@@ -121,7 +132,8 @@ async def start_research(request: ResearchRequest):
 
             except Exception as e:
                 print(f"Attempt {attempt + 1} failed: {e}")
-                current_llm_index += 1
+                # Notice: current_llm_index += 1 is GONE from here!
+                
                 if attempt == len(llm_pool) - 1:
                     yield f"data: {json.dumps({'status': 'error', 'message': 'Service temporarily unavailable.'})}\n\n"
                 else:

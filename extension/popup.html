@@ -105,7 +105,10 @@
       border-radius: 6px;
       border-left: 4px solid var(--accent-blue);
       min-height: 100px;
+      max-height: 200px; /* Limits the box height */
+      overflow-y: auto;  /* Adds a scrollbar when needed */
       line-height: 1.5;
+      font-family: 'Courier New', Courier, monospace; /* Gives it a terminal look */
     }
 
     #closeBtn {

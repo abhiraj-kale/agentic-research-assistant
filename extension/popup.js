@@ -8,8 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function runTask(payload) {
         runBtn.disabled = true;
         summarizeBtn.disabled = true;
-        output.innerText = "Connecting to backend...";
-        output.style.color = "white";
+        
+        // Clear previous logs and set the initial message
+        output.innerText = "⏳ Connecting to AI core...\n";
+        output.style.color = "var(--text-gray)";
 
         try {
             const response = await fetch('http://localhost:8000/research', {
@@ -18,39 +20,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Backend error');
+            }
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
+            let buffer = ""; // This is the secret sauce to fix the "doing nothing" bug
 
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
+                buffer += decoder.decode(value, { stream: true });
                 
-                // SSE chunks start with "data: "
-                const lines = chunk.split('\n');
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = JSON.parse(line.slice(6));
+                // Split by the double newline that SSE uses to separate messages
+                let parts = buffer.split('\n\n');
+                
+                // Keep the last part in the buffer because it might be incomplete
+                buffer = parts.pop();
 
-                        if (data.status === "progress") {
-                            // Update the UI with the live message
-                            output.innerText = data.message; 
-                        } else if (data.status === "complete") {
-                            renderPDF(data.content, payload.topic || "Summary");
-                        } else if (data.status === "error") {
-                            throw new Error(data.message);
+                for (const part of parts) {
+                    const line = part.trim();
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const jsonStr = line.slice(6);
+                            const data = JSON.parse(jsonStr);
+
+                            if (data.status === "progress") {
+                                output.innerText += `➔ ${data.message}\n`;
+                                output.scrollTop = output.scrollHeight; 
+                            } else if (data.status === "complete") {
+                                output.innerText += "✅ Process complete! Generating PDF...\n";
+                                output.scrollTop = output.scrollHeight;
+                                await renderPDF(data.content, payload.topic || "Summary");
+                            } else if (data.status === "error") {
+                                throw new Error(data.message);
+                            }
+                        } catch (e) {
+                            console.error("Error parsing JSON chunk:", e, "Line was:", line);
+                            // If parsing fails, we ignore this specific chunk and move on
                         }
                     }
                 }
             }
         } catch (error) {
-            output.innerText = `❌ Error: ${error.message}`;
+            output.innerText += `\n❌ Error: ${error.message}\n`;
             output.style.color = "#e74c3c";
+            output.scrollTop = output.scrollHeight;
         } finally {
             runBtn.disabled = false;
             summarizeBtn.disabled = false;
-            runBtn.innerText = "Start Research";
         }
     }
 
