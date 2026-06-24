@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from crewai import Agent, Task, Crew, LLM
 from crewai_tools import TavilySearchTool
 
@@ -43,6 +43,14 @@ app.add_middleware(
 class ResearchRequest(BaseModel):
     topic: str = None
     textToSummarize: str = None
+
+# --- PRIVACY POLICY (served for the Chrome Web Store listing) ---
+PRIVACY_HTML_PATH = os.path.join(os.path.dirname(__file__), "privacy.html")
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_policy():
+    with open(PRIVACY_HTML_PATH, encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
 
 # Notice: current_llm_index = 0 is GONE from here
 
