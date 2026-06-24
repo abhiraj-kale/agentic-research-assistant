@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Research Assistant",
   "description": "An agentic AI assistant that performs deep research and generates reports via Side Panel.",
-  "version": "2.0",
+  "version": "2.1",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
