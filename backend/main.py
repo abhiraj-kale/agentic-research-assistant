@@ -52,6 +52,13 @@ async def privacy_policy():
     with open(PRIVACY_HTML_PATH, encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
+# --- HEALTH / KEEP-ALIVE (pinged on a schedule so the free-tier instance
+# does not sleep during Chrome Web Store review). Intentionally lightweight:
+# it returns immediately and never touches the LLM/agent machinery. ---
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # Notice: current_llm_index = 0 is GONE from here
 
 @app.post("/research")
