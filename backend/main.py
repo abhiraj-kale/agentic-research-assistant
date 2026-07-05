@@ -146,13 +146,13 @@ async def start_research(request: ResearchRequest):
                 break  # Break out of the retry loop on success
 
             except Exception as e:
-                print(f"Attempt {attempt + 1} failed: {e}")
-                # Notice: current_llm_index += 1 is GONE from here!
-                
+                err_detail = f"{type(e).__name__}: {e}"
+                print(f"Attempt {attempt + 1} failed: {err_detail}")
+
                 if attempt == len(llm_pool) - 1:
-                    yield f"data: {json.dumps({'status': 'error', 'message': 'Service temporarily unavailable.'})}\n\n"
+                    yield f"data: {json.dumps({'status': 'error', 'message': f'All models failed. Last error: {err_detail}'})}\n\n"
                 else:
-                    yield f"data: {json.dumps({'status': 'progress', 'message': '⚠️ Server overload. Switching to backup AI model...'})}\n\n"
+                    yield f"data: {json.dumps({'status': 'progress', 'message': f'⚠️ Model failed ({err_detail[:200]}). Trying backup...'})}\n\n"
                     await asyncio.sleep(1)
 
     # Return the stream directly to the client
