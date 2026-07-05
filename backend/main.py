@@ -15,17 +15,14 @@ load_dotenv()
 # I fixed the order here: Mistral is now truly the first item (Index 0)
 # --- LLM CONFIGURATION ---
 llm_pool = [
-    # 1. Primary: Gemini 2.5 Flash (Lightning fast, huge context window, perfect for research)
+    # Only Gemini is active. Mistral & Groq are disabled because CrewAI 1.14.4
+    # injects a `cache_breakpoint` marker into the system message that they
+    # reject (crewAI issue #5886); Gemini accepts it. Re-enable them once that
+    # upstream bug is fixed.
     LLM(model="gemini/gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY")),
-
-    # 2. Secondary: Mistral Large (Flawless fallback for tool calling)
-    LLM(model="mistral/mistral-large-latest", api_key=os.getenv("MISTRAL_API_KEY")),
-    
-    # 3. Tertiary: Llama 3.1 8B (Fast and reliable Groq fallback)
-    LLM(model="groq/llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
-    
-    # 4. Last Resort: Llama 3.3 70B 
-    LLM(model="groq/llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY"))
+    # LLM(model="mistral/mistral-large-latest", api_key=os.getenv("MISTRAL_API_KEY")),
+    # LLM(model="groq/llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
+    # LLM(model="groq/llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY")),
 ]
 
 search_tool = TavilySearchTool()
@@ -146,13 +143,13 @@ async def start_research(request: ResearchRequest):
                 break  # Break out of the retry loop on success
 
             except Exception as e:
-                err_detail = f"{type(e).__name__}: {e}"
-                print(f"Attempt {attempt + 1} failed: {err_detail}")
+                # Full detail to server logs; users see a friendly message.
+                print(f"Attempt {attempt + 1} failed: {type(e).__name__}: {e}")
 
                 if attempt == len(llm_pool) - 1:
-                    yield f"data: {json.dumps({'status': 'error', 'message': f'All models failed. Last error: {err_detail}'})}\n\n"
+                    yield f"data: {json.dumps({'status': 'error', 'message': 'Service temporarily unavailable. Please try again in a moment.'})}\n\n"
                 else:
-                    yield f"data: {json.dumps({'status': 'progress', 'message': f'⚠️ Model failed ({err_detail[:200]}). Trying backup...'})}\n\n"
+                    yield f"data: {json.dumps({'status': 'progress', 'message': '⚠️ Switching to a backup AI model...'})}\n\n"
                     await asyncio.sleep(1)
 
     # Return the stream directly to the client
