@@ -1,7 +1,7 @@
 fastapi
 uvicorn
-crewai[google-genai,litellm]
-crewai-tools
+crewai[google-genai,litellm]==1.15.1
+crewai-tools==1.15.1
 tavily-python
 python-dotenv
 pydantic

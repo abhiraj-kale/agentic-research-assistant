@@ -62,33 +62,6 @@ async def privacy_policy():
 async def health():
     return {"status": "ok"}
 
-# --- TEMPORARY DIAGNOSTIC: runs a minimal real crew on each model in the pool
-# so we can confirm every provider works after the cache_breakpoint patch.
-# Remove this endpoint once verified. ---
-@app.get("/diag")
-async def diag():
-    import importlib.metadata as _md
-    versions = {}
-    for pkg in ("crewai", "crewai-tools", "litellm", "openai"):
-        try:
-            versions[pkg] = _md.version(pkg)
-        except Exception:
-            versions[pkg] = "n/a"
-    results = []
-    for llm in llm_pool:
-        try:
-            agent = Agent(role="Tester", goal="Reply briefly",
-                          backstory="You reply concisely.", llm=llm, allow_delegation=False)
-            task = Task(description="Reply with the single word OK.",
-                        expected_output="OK", agent=agent)
-            crew = Crew(agents=[agent], tasks=[task])
-            out = await asyncio.to_thread(crew.kickoff)
-            results.append({"model": llm.model, "ok": True, "sample": str(out)[:60]})
-        except Exception as e:
-            results.append({"model": llm.model, "ok": False,
-                            "error": f"{type(e).__name__}: {str(e)[:250]}"})
-    return {"versions": versions, "results": results}
-
 # Notice: current_llm_index = 0 is GONE from here
 
 @app.post("/research")
