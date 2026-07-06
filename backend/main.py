@@ -11,18 +11,24 @@ from crewai_tools import TavilySearchTool
 
 load_dotenv()
 
-# --- LLM CONFIGURATION ---
-# I fixed the order here: Mistral is now truly the first item (Index 0)
-# --- LLM CONFIGURATION ---
+# --- Workaround for crewAI issue #5886 (open upstream): CrewAI injects a
+# `cache_breakpoint` marker into system messages that non-Anthropic providers
+# (Mistral, Groq) reject with a 400 error. Neutralizing the injector lets every
+# provider in the pool work. Defensive: no-op if the internal API changes. ---
+try:
+    import crewai.llms.cache as _crewai_cache
+    _crewai_cache.mark_cache_breakpoint = lambda msg, *a, **k: msg
+    print("[startup] crewAI #5886 cache_breakpoint patch applied")
+except Exception as _e:
+    print(f"[startup] cache_breakpoint patch NOT applied: {_e}")
+
+# --- LLM CONFIGURATION: full multi-provider fallback chain. The cache_breakpoint
+# bug that used to make Mistral/Groq fail is neutralized by the patch above. ---
 llm_pool = [
-    # Only Gemini is active. Mistral & Groq are disabled because CrewAI 1.14.4
-    # injects a `cache_breakpoint` marker into the system message that they
-    # reject (crewAI issue #5886); Gemini accepts it. Re-enable them once that
-    # upstream bug is fixed.
     LLM(model="gemini/gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY")),
-    # LLM(model="mistral/mistral-large-latest", api_key=os.getenv("MISTRAL_API_KEY")),
-    # LLM(model="groq/llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
-    # LLM(model="groq/llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY")),
+    LLM(model="mistral/mistral-large-latest", api_key=os.getenv("MISTRAL_API_KEY")),
+    LLM(model="groq/llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
+    LLM(model="groq/llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY")),
 ]
 
 search_tool = TavilySearchTool()
@@ -55,6 +61,33 @@ async def privacy_policy():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+# --- TEMPORARY DIAGNOSTIC: runs a minimal real crew on each model in the pool
+# so we can confirm every provider works after the cache_breakpoint patch.
+# Remove this endpoint once verified. ---
+@app.get("/diag")
+async def diag():
+    import importlib.metadata as _md
+    versions = {}
+    for pkg in ("crewai", "crewai-tools", "litellm", "openai"):
+        try:
+            versions[pkg] = _md.version(pkg)
+        except Exception:
+            versions[pkg] = "n/a"
+    results = []
+    for llm in llm_pool:
+        try:
+            agent = Agent(role="Tester", goal="Reply briefly",
+                          backstory="You reply concisely.", llm=llm, allow_delegation=False)
+            task = Task(description="Reply with the single word OK.",
+                        expected_output="OK", agent=agent)
+            crew = Crew(agents=[agent], tasks=[task])
+            out = await asyncio.to_thread(crew.kickoff)
+            results.append({"model": llm.model, "ok": True, "sample": str(out)[:60]})
+        except Exception as e:
+            results.append({"model": llm.model, "ok": False,
+                            "error": f"{type(e).__name__}: {str(e)[:250]}"})
+    return {"versions": versions, "results": results}
 
 # Notice: current_llm_index = 0 is GONE from here
 
