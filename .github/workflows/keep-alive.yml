@@ -7,13 +7,13 @@ name: Keep backend awake
 #
 # Notes:
 # - GitHub-scheduled runs are best-effort and can be delayed a few minutes,
-#   so we ping every 10 min to stay comfortably under the 15-min sleep window.
+#   so we ping every 5 min to stay comfortably under the 15-min sleep window.
 # - Scheduled workflows are auto-disabled after 60 days of no repo activity.
 # - You can also run it manually from the Actions tab (workflow_dispatch).
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
