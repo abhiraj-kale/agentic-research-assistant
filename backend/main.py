@@ -91,7 +91,7 @@ async def privacy_policy():
 # not sleep during Chrome Web Store review). Lightweight: returns immediately and
 # never touches the LLM/agent machinery, so it also answers instantly on a cold
 # wake. ---
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok"}
 
