@@ -95,6 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get the current active tab
             let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+            // Restricted pages (chrome://, the Web Store, the new-tab page, other
+            // extensions, etc.) cannot be scripted. Fail with a clear message instead
+            // of a confusing permissions error.
+            if (!tab || !tab.id || !tab.url || !/^https?:\/\//i.test(tab.url)) {
+                throw new Error("This page can't be summarized. Open a normal web page (http/https) and try again.");
+            }
+
             // Execute script to get page text
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
